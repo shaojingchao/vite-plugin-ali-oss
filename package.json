@@ -1,11 +1,11 @@
 {
-	"name": "vite-plugin-ali-oss",
-	"version": "2.0.2",
+	"name": "@shaojc/vite-plugin-ali-oss",
+	"version": "1.0.0",
 	"type": "module",
-	"author": "xiaweiss",
+	"author": "shaojc",
 	"description": "Upload the production files bundled in the project to Ali OSS, except for html",
-	"homepage": "https://github.com/xiaweiss/vite-plugin-ali-oss",
-	"repository": "https://github.com/xiaweiss/vite-plugin-ali-oss",
+	"homepage": "https://github.com/shaojingchao/vite-plugin-ali-oss",
+	"repository": "https://github.com/shaojingchao/vite-plugin-ali-oss",
 	"license": "MIT",
 	"types": "index.d.ts",
 	"main": "index.js",
@@ -15,7 +15,6 @@
 		"aliyun"
 	],
 	"scripts": {
-		"example:build": "pnpm -C example build",
 		"changelog": "conventional-changelog -i CHANGELOG.md -s"
 	},
 	"dependencies": {
@@ -30,7 +29,7 @@
 		"vite": "^5.0.0"
 	},
 	"publishConfig": {
-		"@xiaweiss:registry": "https://npm.pkg.github.com"
+		"@shaojc:registry": "https://npm.pkg.github.com"
 	},
 	"engines": {
 		"node": ">=18.0.0"
