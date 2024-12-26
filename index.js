@@ -3,7 +3,7 @@ import { globSync } from 'tinyglobby'
 import path from 'path'
 import OSS from 'ali-oss'
 import { URL } from 'node:url'
-
+import pLimit from 'p-limit'
 import { normalizePath } from 'vite'
 
 const retry = async (fn, time) => {
@@ -31,6 +31,8 @@ const retry = async (fn, time) => {
 export default function vitePluginAliOss (options) {
   let baseConfig = '/'
   let buildConfig = {}
+  const limit = pLimit(Math.min(10, options.concurrency || 5))
+  Reflect.deleteProperty(options, 'concurrency')
 
   if (options.enabled !== void 0 && !options.enabled) {
     return
@@ -58,12 +60,11 @@ export default function vitePluginAliOss (options) {
         const {pathname: ossBasePath, origin: ossOrigin} = new URL(baseConfig)
 
         const createOssOption = Object.assign({}, options)
-        delete createOssOption.overwrite
-        delete createOssOption.ignore
-        delete createOssOption.headers
-        delete createOssOption.test
-        delete createOssOption.enabled
-        delete createOssOption.retry
+        const dropKeys = ['overwrite', 'ignore', 'headers', 'test', 'enabled', 'retry']
+
+        dropKeys.forEach(key => {
+          Reflect.deleteProperty(createOssOption, key)
+        })
 
         const client = new OSS(createOssOption)
         const ssrClient = buildConfig.ssrManifest
@@ -92,13 +93,13 @@ export default function vitePluginAliOss (options) {
         console.log('')
 
         const startTime = new Date().getTime()
-
+        const tasks = []
         for (const fileFullPath of files) {
           const filePath = normalizePath(fileFullPath).split(outDirPath)[1] // eg: '/assets/vendor.bfb92b77.js'
 
           const ossFilePath = ossBasePath.replace(/\/$/, '') + filePath // eg: '/base/assets/vendor.bfb92b77.js'
 
-          const completePath = ossOrigin + ossFilePath // eg: 'https://foo.com/base/assets/vendor.bfb92b77.js'
+          const completePath = ossOrigin + ossFilePath // eg: 'https://cdn.tesoon.com/zhbk/dev-test/assets/vendor.bfb92b77.js'
 
           const output = `${buildConfig.outDir + filePath} => ${color.green(completePath)}`
 
@@ -106,38 +107,43 @@ export default function vitePluginAliOss (options) {
             console.log(`test upload path: ${output}`)
             continue
           }
-
-          if (options.overwrite) {
-            await retry(async () => {
-              await client.put(
-                ossFilePath,
-                fileFullPath,
-                {
-                  headers: options.headers || {}
-                }
-              )
-              console.log(`upload complete: ${output}`)
-            }, Number(options.retry || 0))
-
-          } else {
-            try {
-              await client.head(ossFilePath);
-              console.log(`${color.gray('files exists')}: ${output}`)
-
-            } catch (error) {
+          const task = async () => {
+            if (options.overwrite) {
               await retry(async () => {
                 await client.put(
                   ossFilePath,
                   fileFullPath,
                   {
-                    headers: Object.assign(options.headers || {}, { 'x-oss-forbid-overwrite': true })
+                    headers: options.headers || {}
                   }
                 )
                 console.log(`upload complete: ${output}`)
               }, Number(options.retry || 0))
+
+            } else {
+              try {
+                await client.head(ossFilePath);
+                console.log(`${color.gray('files exists')}: ${output}`)
+
+              } catch (error) {
+                await retry(async () => {
+                  await client.put(
+                    ossFilePath,
+                    fileFullPath,
+                    {
+                      headers: Object.assign(options.headers || {}, { 'x-oss-forbid-overwrite': true })
+                    }
+                  )
+                  console.log(`upload complete: ${output}`)
+                }, Number(options.retry || 0))
+              }
             }
           }
+
+          tasks.push(task)
         }
+
+        await Promise.all(tasks.map(limit))
 
         const duration = (new Date().getTime() - startTime) / 1000
 

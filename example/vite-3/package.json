@@ -14,7 +14,6 @@
   "devDependencies": {
     "@vitejs/plugin-vue": "^3.0.3",
     "dotenv": "^16.0.1",
-    "vite": "3.1.0",
-    "vite-plugin-ali-oss": "^1.0.10"
+    "vite": "3.1.0"
   }
 }
