@@ -14,7 +14,7 @@ const options: AliOssOptions = {
   accessKeySecret: process.env.VITE_ACCESS_KEY_SECRET!, // Note: Add your accessKeySecret
   bucket: process.env.VITE_BUCKET!,
   concurrency: 5,
-  // overwrite: false,
+  overwrite: true,
   // enabled: false,
   // test: true,
   // retry: 3
